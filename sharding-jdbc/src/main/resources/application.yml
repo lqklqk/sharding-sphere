@@ -1,0 +1,74 @@
+
+
+spring:
+  application:
+    name: sharding-jdbc
+  shardingsphere:
+    datasource:
+      names: db0,db1
+      db0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        url: jdbc:mysql://192.168.1.196:3306/shardingdb1?serverTimezone=GMT%2B8
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 123456
+      db1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        url: jdbc:mysql://192.168.1.196:3306/shardingdb2?serverTimezone=GMT%2B8
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 123456
+    rules:
+      sharding:
+        key-generators:
+          snowflake:
+            type: snowflake
+            props:
+              worker-id: 1
+        tables:
+          course:
+            # 真实表分布
+            actual-data-nodes: db$->{0..1}.course_$->{1..2}
+            # 主键生成策略，分布式主键生成算法
+            key-generate-strategy:
+              column: cid
+              key-generator-name: snowflake
+            # 分库策略
+            database-strategy:
+              standard:
+                sharding-column: cid
+                sharding-algorithm-name: course_db_alg
+            table-strategy:
+              standard:
+                sharding-column: cid
+                sharding-algorithm-name: course_tbl_alg
+        # 分库配置分片算法
+        sharding-algorithms:
+          course_db_alg:
+            type: MOD
+            props:
+              # 基于取模的分片算法
+              sharding-count: 2
+          # 分表算法
+          course_tbl_alg:
+            type: INLINE
+            props:
+              # 基于行表达式的分片算法
+              algorithm-expression: course_$->{cid % 2 + 1}
+    # 显示原sql、拆解后的sql
+    props:
+      sql-show: true
+  main:
+    allow-bean-definition-overriding: true
+
+#spring:
+#  datasource:
+#    druid:
+#      db-type: mysql
+#      driver-class-name: com.mysql.cj.jdbc.Driver
+#      url: jdbc:mysql://192.168.1.196:3306/shardingdb1?serverTimezone=GMT%2B8
+#      username: root
+#      password: 123456
+
+mybatis-plus:
+  mapper-locations: classpath:mybatis/mapper/**/*.xml

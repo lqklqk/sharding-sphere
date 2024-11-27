@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lqk.shardingjdbc.dao.mapper.CourseMapper">
+    <resultMap id="BaseResultMap" type="com.lqk.shardingjdbc.dao.entity.Course">
+        <result column="cid" property="cid" jdbcType="BIGINT"/>
+        <result column="cname" property="cname" jdbcType="VARCHAR"/>
+        <result column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="cstatus" property="cstatus" jdbcType="BIGINT"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        cid, cname, user_id, cstatus
+    </sql>
+    <insert id="insert">
+        insert into course (cname, user_id, cstatus)
+        values
+            (#{cname}, #{userId}, #{cstatus})
+    </insert>
+    <select id="selectById" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from course where cid = #{cid}
+    </select>
+    <select id="selectBatchById" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from course
+        where cid in #{cid}
+    </select>
+</mapper>
