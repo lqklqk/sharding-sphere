@@ -19,5 +19,9 @@ public interface CourseMapper {
 
     Course selectById(@Param("cid") Long cid);
 
-    List<Course> selectBatchById(@Param("cids") List<Long> cids);
+    List<Course> selectBatchById(@Param("cids") List<Long> cids, @Param("userId") Long userId);
+
+    List<Course> selectRangeById(@Param("lcid") Long lcid, @Param("rcid") Long rcid, @Param("userId") Long userId);
+
+    List<Course> selectByOddCid();
 }

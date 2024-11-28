@@ -12,8 +12,7 @@
     </sql>
     <insert id="insert">
         insert into course (cname, user_id, cstatus)
-        values
-            (#{cname}, #{userId}, #{cstatus})
+        values (#{cname}, #{userId}, #{cstatus})
     </insert>
     <select id="selectById" resultMap="BaseResultMap">
         select <include refid="Base_Column_List"/>
@@ -22,6 +21,23 @@
     <select id="selectBatchById" resultMap="BaseResultMap">
         select <include refid="Base_Column_List"/>
         from course
-        where cid in #{cid}
+        where cid in
+        <foreach collection="cids" index="index" item="cid" open="(" separator="," close=")">
+            #{cid}
+        </foreach>
+        and user_id = #{userId}
+        order by user_id
+    </select>
+    <select id="selectRangeById" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from course
+        where cid between #{lcid} and #{rcid}
+        and user_id = #{userId}
+    </select>
+
+    <select id="selectByOddCid" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from course
+        where MOD(cid,2)=1
     </select>
 </mapper>

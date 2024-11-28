@@ -39,8 +39,16 @@ spring:
                 sharding-column: cid
                 sharding-algorithm-name: course_db_alg
             table-strategy:
-              standard:
-                sharding-column: cid
+              # 标准分片策略
+#              standard:
+#                sharding-column: cid
+#                sharding-algorithm-name: course_tbl_alg
+              # 复合分片策略
+#              complex:
+#                sharding-columns: cid,user_id
+#                sharding-algorithm-name: course_tbl_alg
+              # 强制分片
+              hint:
                 sharding-algorithm-name: course_tbl_alg
         # 分库配置分片算法
         sharding-algorithms:
@@ -50,11 +58,28 @@ spring:
               # 基于取模的分片算法
               sharding-count: 2
           # 分表算法
+#          course_tbl_alg:
+#            type: INLINE
+#            props:
+#              # 基于行表达式的分片算法
+#              algorithm-expression: course_$->{cid % 2 + 1}
+#              allow-range-query-with-inline-sharding: true
+#          course_tbl_alg:
+#            # 复合分片算法
+#            type: COMPLEX_INLINE
+#            props:
+#              algorithm-expression: course_$->{(cid+user_id+1)%2+1}
+#              allow-range-query-with-inline-sharding: true
+#          course_tbl_alg:
+#            type: CLASS_BASED
+#            props:
+#              strategy: COMPLEX
+#              algorithmClassName: com.lqk.shardingjdbc.config.sharding.algorithem.TableShardingComplexAlgorithm
           course_tbl_alg:
-            type: INLINE
+            type: HINT_INLINE
             props:
-              # 基于行表达式的分片算法
-              algorithm-expression: course_$->{cid % 2 + 1}
+              algorithm-expression: course_${value}
+
     # 显示原sql、拆解后的sql
     props:
       sql-show: true

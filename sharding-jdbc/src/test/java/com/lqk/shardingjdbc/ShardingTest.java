@@ -1,6 +1,7 @@
 package com.lqk.shardingjdbc;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.google.common.collect.Lists;
 import com.lqk.shardingjdbc.dao.entity.Course;
 import com.lqk.shardingjdbc.dao.entity.Dict;
 import com.lqk.shardingjdbc.dao.mapper.CourseMapper;
@@ -36,7 +37,8 @@ public class ShardingTest {
         for(int i = 0; i < 10 ; i++){
             Course c = new Course();
             c.setCname("java");
-            c.setUserId(100L);
+            Long userId = (long)(1000 + (i % 3));
+            c.setUserId(userId);
             c.setCstatus("1");
             courseMapper.insert(c);
         }
@@ -44,59 +46,42 @@ public class ShardingTest {
 
     @Test
     public void queryCourse(){
+        Course course = courseMapper.selectById(1068568289690517504L);
+        System.out.println(course);
+        System.out.println("----------------------------------");
+        List<Course> courses = courseMapper.selectBatchById(Lists.newArrayList(1068568289690517504L, 1068568290437103616L, 1068568290453880833L, 1068568290491629569L), 0L);
+        courses.forEach(System.out::println);
+    }
 
-        QueryWrapper wrapper = new QueryWrapper<Course>();
-//        wrapper.eq("cid",1508073797789872129L);
-//        wrapper.between("cid",1508073797789872129L,1508073803737395201L);
-//        wrapper.in("cid",1508073797789872129L,1508073803468959745L);
-//        wrapper.between("user_id",99L,101L);
+    @Test
+    public void queryCourse2(){
+        List<Course> courses = courseMapper.selectRangeById(1068568290378383361L, 1068568290437103616L, 1001L);
+        courses.forEach(System.out::println);
+    }
 
-        HintManager hintManager = HintManager.getInstance();
-        hintManager.addTableShardingValue("course","1");
+    @Test
+    public void queryCourse3(){
+        List<Course> courses = courseMapper.selectBatchById(Lists.newArrayList(1068568289690517504L, 1068568290403549184L), 1002L);
+        courses.forEach(System.out::println);
+    }
 
-        for (Object o : courseMapper.selectList(wrapper)) {
-            System.out.println(o);
+    @Test
+    public void queryCourseOddCid(){
+        List<Course> courses = courseMapper.selectByOddCid();
+        courses.forEach(System.out::println);
+    }
+
+    @Test
+    public void queryByHint(){
+        // 强制只查询course_1
+        // HintManager实现了AutoCloseable接口，会自动调用hintManager.close();清除ThreadLocal，释放内存
+        try(HintManager hintManager = HintManager.getInstance()) {
+            // 注意：addDatabaseShardingValue\setDatabaseShardingValue这两个参数是强制分库
+            hintManager.addTableShardingValue("course","1");
+
+            for (Object o : courseMapper.selectByOddCid()) {
+                System.out.println(o);
+            }
         }
     }
-//
-//
-//     @Test
-//     public void addDict(){
-//         Dict dict = new Dict();
-//         dict.setUstatus("1");
-//         dict.setUvalue("正常");
-//         dictMapper.insert(dict);
-//
-//         Dict dict2 = new Dict();
-//         dict2.setUstatus("2");
-//         dict2.setUvalue("异常");
-//         dictMapper.insert(dict2);
-//     }
-//
-//     @Test
-//     public void addUser(){
-//         for (int i = 0; i < 10; i++) {
-//             User u = new User();
-//             u.setUsername("user");
-//             u.setUstatus(""+(i%2+1));
-//             userMapper.insert(u);
-//         }
-//     }
-//
-//     @Test
-//     public void queryDict(){
-//         QueryWrapper<Dict> wrapper = new QueryWrapper<Dict>();
-// //        wrapper.eq("ustatus", "1");
-//         List<Dict> dicts = dictMapper.selectList(wrapper);
-//         dicts.forEach(dict -> System.out.println(dict));
-//     }
-//
-//     @Test
-//     public void queryUserStatus(){
-//         List<User> users = userMapper.queryUserStatus();
-//         for(User user : users){
-//             System.out.println(user);
-//         }
-//     }
-
 }
