@@ -9,11 +9,12 @@ import lombok.Data;
  * @description:
  **/
 @Data
-@TableName("t_user")
 public class User {
-    private Long userId;
+    private String userid;
     private String username;
-    private String ustatus;
-    private int uage;
-
+    private String password;
+    private String passwordCipher;
+    private String userstatus;
+    private int age;
+    private String sex;
 }

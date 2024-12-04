@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lqk.shardingjdbc.dao.mapper.ShardingRouteMapper">
+    <resultMap id="resultMap" type="com.lqk.shardingjdbc.dao.entity.sharding.ShardingRoute">
+        <result column="id" jdbcType="BIGINT" property="id"/>
+        <result column="course_id" jdbcType="BIGINT" property="courseId"/>
+        <result column="column_name" jdbcType="VARCHAR" property="columnName"/>
+        <result column="column_value" jdbcType="VARCHAR" property="columnValue"/>
+        <result column="real_table" jdbcType="VARCHAR" property="realTable"/>
+        <result column="logic_table" jdbcType="VARCHAR" property="logicTable"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+    </resultMap>
+    
+    <insert id="insert" keyColumn="id" keyProperty="id" useGeneratedKeys="true"
+            parameterType="com.lqk.shardingjdbc.dao.entity.sharding.ShardingRoute">
+        insert into sharding_route
+            (course_id, column_name, column_value, real_table, logic_table)
+        values
+            (#{courseId}, #{columnName}, #{columnValue}, #{realTable}, #{logicTable})
+    </insert>
+
+    <insert id="batchInsert" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+        insert into sharding_route
+        (course_id, column_name, column_value, real_table, logic_table)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.courseId}, #{item.columnName}, #{item.columnValue},#{item.realTable},#{item.logicTable})
+        </foreach>
+    </insert>
+
+    <select id="getAll" resultMap="resultMap">
+        select course_id, column_name, column_value, real_table, logic_table
+        from sharding_route
+    </select>
+
+    <select id="get" resultMap="resultMap">
+        select course_id, column_name, column_value, real_table, logic_table
+        from sharding_route
+        where column_value = #{columnValue} and logic_table = #{logicTable} and column_name = #{columnName}
+    </select>
+
+    <select id="getOneSameCompanyRoute" resultMap="resultMap">
+        select course_id, column_name, column_value, real_table, logic_table
+        from sharding_route
+        where logic_table = #{logicTable} and course_id = #{courseId} limit 1
+    </select>
+
+    <select id="list" resultMap="resultMap">
+        select logic_table, column_name, column_value, real_table, create_time
+        from sharding_route
+        where logic_table = #{logicTable}
+        <if test="columnValue != null and columnValue != ''">
+            and column_value = #{columnValue}
+        </if>
+        <if test="columnValues!=null and columnValues.size>0">
+            and column_value in
+            <foreach close=")" collection="columnValues" index="index" item="item" open="(" separator=",">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="countRealTable" resultType="com.lqk.shardingjdbc.dao.entity.sharding.ShardingRealTableCount">
+        select real_table realTable, count(id) cnt
+        from sharding_route
+        where logic_table = #{logicTable}
+        group by real_table
+        order by count(id)
+    </select>
+
+    <select id="listByAccountOrg" resultMap="resultMap">
+        select logic_table, column_name, column_value, real_table, create_time
+        from sharding_route
+        where logic_table = #{logicTable}
+        and column_value in
+        <foreach close=")" collection="accountOrgIds" index="index" item="item" open="(" separator=",">
+            #{item, jdbcType=VARCHAR}
+        </foreach>
+    </select>
+    
+</mapper>

@@ -1,9 +1,22 @@
 
 
 spring:
+  data:
+    redis:
+      host: 192.168.1.196 #redis服务器地址
+      port: 6379  #redis服务器端口号
+      database: 0 #默认使用0号数据库（数据库索引）
+      timeout: 1800000  #连接超时时间（毫秒）
+      lettuce:
+        pool:
+          max-active: 20  #连接池最大连接数（使用负值表示没有限制）
+          max-wait: -1  #最大阻塞等待时间（负数表示没有限制）
+          max-idle: 5 #连接池中的最大空闲连接
+          min-idle: 0 #连接池中的最小空闲连接
   application:
     name: sharding-jdbc
   shardingsphere:
+    enabled: true
     datasource:
       names: db0,db1
       db0:
@@ -19,12 +32,20 @@ spring:
         username: root
         password: 123456
     rules:
+      # 数据分片
       sharding:
+        # 自定义自动分片路由策略配置
+        auto-assign-route-strategy: least
         key-generators:
           snowflake:
             type: snowflake
             props:
               worker-id: 1
+          # 自定义主键生成策略
+          custom-redis-key:
+            type: redisSharding
+            props:
+              strategy-key: user
         tables:
           course:
             # 真实表分布
@@ -50,10 +71,31 @@ spring:
               # 强制分片
               hint:
                 sharding-algorithm-name: course_tbl_alg
+          user:
+            # 真实表分布
+            actual-data-nodes: db$->{0..1}.user_$->{1..2}
+            # 主键生成策略，分布式主键生成算法
+            key-generate-strategy:
+              column: userid
+              key-generator-name: custom-redis-key
+            # 分库策略
+            database-strategy:
+              standard:
+                sharding-column: userid
+                sharding-algorithm-name: user_db_alg
+            table-strategy:
+              standard:
+                sharding-column: userid
+                sharding-algorithm-name: user_tbl_alg
         # 分库配置分片算法
         sharding-algorithms:
           course_db_alg:
             type: MOD
+            props:
+              # 基于取模的分片算法
+              sharding-count: 2
+          user_db_alg:
+            type: HASH_MOD
             props:
               # 基于取模的分片算法
               sharding-count: 2
@@ -70,16 +112,49 @@ spring:
 #            props:
 #              algorithm-expression: course_$->{(cid+user_id+1)%2+1}
 #              allow-range-query-with-inline-sharding: true
-#          course_tbl_alg:
-#            type: CLASS_BASED
-#            props:
-#              strategy: COMPLEX
-#              algorithmClassName: com.lqk.shardingjdbc.config.sharding.algorithem.TableShardingComplexAlgorithm
+          user_tbl_alg:
+            type: CLASS_BASED
+            props:
+              strategy: STANDARD
+              algorithmClassName: com.lqk.shardingjdbc.config.sharding.algorithem.UserStandardShardingAlgorithm
           course_tbl_alg:
             type: HINT_INLINE
             props:
               algorithm-expression: course_${value}
-
+      # 数据加密
+      encrypt:
+        tables:
+          user:
+            columns:
+              password:
+                # 存储明文的列
+                plain-column: password
+                # 存储密文的列
+                cipher-column: password_cipher
+                # 加密器名称
+                encryptor-name: user_password_encry
+        # 加密器
+        encryptors:
+          user_password_encry:
+            type: AES
+            props:
+              aes-key-value: 123456
+          user_password_encry2:
+            type: MD5
+          user_password_encry3:
+            type: SM3
+            props:
+              sm3-salt: 12345678
+          user_password_encry4:
+            type: SM4
+            props:
+              sm4-key: 86C63180C2806ED1F43A859DE501215C
+              sm4-mode: ECB
+              sm4-padding: PKCS5Padding
+          user_password_encry5:
+            type: RC4
+            props:
+              rc4-key-value: 12345678
     # 显示原sql、拆解后的sql
     props:
       sql-show: true
@@ -97,3 +172,4 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath:mybatis/mapper/**/*.xml
+
