@@ -4,14 +4,13 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
- * @author ：楼兰
+ * @author ：lqk
  * @date ：Created in 2020/11/12
- * @description:
+ * @description: 字典表实体
  **/
 @Data
-@TableName("t_dict")
 public class Dict {
     private Long dictId;
-    private String ustatus;
-    private String uvalue;
+    private String dictKey;
+    private String dictVal;
 }

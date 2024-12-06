@@ -12,10 +12,8 @@ import java.util.List;
  * @description:
  **/
 @Repository
-public interface UserMapper {
+public interface UserSplitMapper {
     int insert(User user);
-
-    int insertExistId(User user);
 
     List<User> selectByPassword(@Param("password") String password);
 }

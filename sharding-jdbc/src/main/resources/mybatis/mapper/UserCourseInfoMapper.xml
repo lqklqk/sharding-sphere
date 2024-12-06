@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lqk.shardingjdbc.dao.mapper.UserCourseInfoMapper">
+    <resultMap id="BaseResultMap" type="com.lqk.shardingjdbc.dao.entity.UserCourseInfo">
+        <result column="infoid" property="infoid" jdbcType="BIGINT"/>
+        <result column="userid" property="userid" jdbcType="VARCHAR"/>
+        <result column="courseid" property="courseid" jdbcType="BIGINT"/>
+    </resultMap>
+    <sql id="Base_Column">
+        infoid, userid, courseid
+    </sql>
+    <insert id="insert">
+        insert into user_course_info (userid, courseid)
+        values (#{userid}, #{courseid})
+    </insert>
+    <select id="selectUserCourse" resultMap="BaseResultMap">
+        select uci.*
+        from user_course_info uci, user u
+        where uci.userid = u.userid
+    </select>
+</mapper>

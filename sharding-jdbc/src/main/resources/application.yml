@@ -42,11 +42,33 @@ spring:
             props:
               worker-id: 1
           # 自定义主键生成策略
-          custom-redis-key:
+          user-redis-key-generator:
             type: redisSharding
             props:
               strategy-key: user
+          user-split-key-generator:
+            type: redisSharding
+            props:
+              strategy-key: user_split
+          dict-key-generator:
+            type: redisSharding
+            props:
+              strategy-key: dict
+          sharding-route-key-generator:
+            type: redisSharding
+            props:
+              strategy-key: sharding_route
+          user-course-info-key-generator:
+            type: redisSharding
+            props:
+              strategy-key: user_course_info
         tables:
+          sharding_route:
+            actual-data-nodes: db$->{0..1}.sharding_route
+            key-generate-strategy:
+              column: id
+              key-generator-name: sharding-route-key-generator
+          # 基础分库分表测试案例
           course:
             # 真实表分布
             actual-data-nodes: db$->{0..1}.course_$->{1..2}
@@ -61,24 +83,61 @@ spring:
                 sharding-algorithm-name: course_db_alg
             table-strategy:
               # 标准分片策略
-#              standard:
-#                sharding-column: cid
-#                sharding-algorithm-name: course_tbl_alg
+              standard:
+                sharding-column: cid
+                sharding-algorithm-name: course_tbl_alg
+            # 分片审计策略
+            audit-strategy:
+              auditor-names:
+                - course_auditor
+              # 表示分片审计允许对hint分片策略禁用
+              allow-hint-disable: true
               # 复合分片策略
 #              complex:
 #                sharding-columns: cid,user_id
 #                sharding-algorithm-name: course_tbl_alg
               # 强制分片
-              hint:
-                sharding-algorithm-name: course_tbl_alg
+#              hint:
+#                sharding-algorithm-name: course_tbl_alg
+          # 自定义主键、数据加密测试案例
           user:
             # 真实表分布
             actual-data-nodes: db$->{0..1}.user_$->{1..2}
             # 主键生成策略，分布式主键生成算法
+#            key-generate-strategy:
+#              column: userid
+#              key-generator-name: user-redis-key-generator
+            # 分库策略
+            database-strategy:
+              standard:
+                sharding-column: userid
+                sharding-algorithm-name: user_db_alg
+            table-strategy:
+              standard:
+                sharding-column: userid
+                sharding-algorithm-name: user_tbl_alg
+          # 分库分表测试案例
+          user_split:
+            # 配置读写分的虚拟库
+            actual-data-nodes: userdb.user_split
             key-generate-strategy:
               column: userid
-              key-generator-name: custom-redis-key
-            # 分库策略
+              key-generator-name: user-split-key-generator
+          # 广播表案例
+          dict:
+            actual-data-nodes: db$->{0..1}.dict
+            key-generate-strategy:
+              column: dict_id
+              key-generator-name: dict-key-generator
+          # 绑定表案例
+          user_course_info:
+            # 真实表分布
+            actual-data-nodes: db$->{0..1}.user_course_info_$->{1..2}
+            # 主键生成策略，分布式主键生成算法
+            key-generate-strategy:
+              column: infoid
+              key-generator-name: user-course-info-key-generator
+            # 分库策略--与user表一致（与user表进行绑定）
             database-strategy:
               standard:
                 sharding-column: userid
@@ -100,12 +159,12 @@ spring:
               # 基于取模的分片算法
               sharding-count: 2
           # 分表算法
-#          course_tbl_alg:
-#            type: INLINE
-#            props:
-#              # 基于行表达式的分片算法
-#              algorithm-expression: course_$->{cid % 2 + 1}
-#              allow-range-query-with-inline-sharding: true
+          course_tbl_alg:
+            type: INLINE
+            props:
+              # 基于行表达式的分片算法
+              algorithm-expression: course_$->{cid % 2 + 1}
+              allow-range-query-with-inline-sharding: true
 #          course_tbl_alg:
 #            # 复合分片算法
 #            type: COMPLEX_INLINE
@@ -117,10 +176,19 @@ spring:
             props:
               strategy: STANDARD
               algorithmClassName: com.lqk.shardingjdbc.config.sharding.algorithem.UserStandardShardingAlgorithm
-          course_tbl_alg:
-            type: HINT_INLINE
-            props:
-              algorithm-expression: course_${value}
+#          course_tbl_alg:
+#            type: HINT_INLINE
+#            props:
+#              algorithm-expression: course_${value}
+        # 指定广播表。广播表会忽略分表逻辑，每个分库中的表中插入数据
+        broadcast-tables: dict,sharding_route
+        binding-tables:
+          - user,user_course_info
+        # 分片审计策略
+        auditors:
+          course_auditor:
+            # 对逻辑表查询时，必须带上分片键
+            type: DML_SHARDING_CONDITIONS
       # 数据加密
       encrypt:
         tables:
@@ -155,6 +223,31 @@ spring:
             type: RC4
             props:
               rc4-key-value: 12345678
+      # 读写分离
+      readwrite-splitting:
+        data-sources:
+          # 配置读写分离，一个主库（写库），多个从库（读库）
+          userdb:
+            static-strategy:
+              write-data-source-name: db0
+              read-data-source-names:
+                - db1
+            load-balancer-name: user-split-lb
+        load-balancers:
+          user-split-lb:
+            # 按操作轮询
+            type: ROUND_ROBIN
+            # 该算法不需要配置
+            props:
+              test-key: 1
+#            # 按事务轮询
+#            type: TRANSACTION_ROUND_ROBIN
+#            # 按操作随机
+#            type: RANDOM
+#            # 按事务随机
+#            type: TRANSACTION_RANDOM
+#            # 读请求全部强制路由到主库
+#            type: FIXED_PRIMARY
     # 显示原sql、拆解后的sql
     props:
       sql-show: true
